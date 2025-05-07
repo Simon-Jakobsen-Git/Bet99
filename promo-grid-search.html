@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Baccarat Hedge Optimizer</title>
+  <style>
+    table { border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: right; }
+    th { background: #eee; }
+  </style>
+</head>
+<body>
+  <h2>Baccarat Hedge Optimizer</h2>
+  <p>Exploring hedge space outward from (1300, 2650, 5500) using $50 steps</p>
+  <button onclick="runOptimization()">Run Grid Search</button>
+  <div id="results"></div>
+
+  <script>
+    const rounds = [1500, 3000, 6000];
+    const rtp = 0.95;
+    const playthroughRequired = 45000;
+    const initialPromo = 1500;
+
+    function computeExpectedValue(h1, h2, h3) {
+      const hedges = [h1, h2, h3];
+      const outcomes = [
+        { path: ['player', 'player', 'player'], weight: 1 },
+        { path: ['player', 'player', 'banker'], weight: 1 },
+        { path: ['player', 'banker'], weight: 2 },
+        { path: ['banker'], weight: 4 }
+      ];
+
+      let expected = 0;
+      let minVal = Infinity;
+      let maxVal = -Infinity;
+
+      for (let outcome of outcomes) {
+        const path = outcome.path;
+        const weight = outcome.weight / 8;
+
+        let promoBalance = 0;
+        let totalHedge = 0;
+        let promoWagered = 0;
+        let hedgeWinnings = 0;
+        let currentHedge = 0;
+        let bankerHit = false;
+
+        for (let i = 0; i < path.length; i++) {
+          const r = path[i];
+          const promoBet = rounds[i];
+          const hedge = hedges[i];
+          currentHedge = hedge;
+
+          promoWagered += promoBet;
+          totalHedge += hedge;
+
+          if (r === 'player') {
+            promoBalance += promoBet;
+          } else {
+            hedgeWinnings = hedge * 0.95;
+            bankerHit = true;
+            break;
+          }
+        }
+
+        let value = bankerHit
+          ? hedgeWinnings - (totalHedge - currentHedge)
+          : initialPromo + (promoBalance - totalHedge - (playthroughRequired - promoWagered - (playthroughRequired - promoWagered) * rtp));
+
+        expected += value * weight;
+        minVal = Math.min(minVal, value);
+        maxVal = Math.max(maxVal, value);
+      }
+
+      return { expected, minVal, maxVal };
+    }
+
+    function runOptimization() {
+      let results = [];
+      const h1Base = 1300;
+      const h2Base = 2650;
+      const h3Base = 5500;
+      const step = 50;
+      const range = 10; // explore 10 steps in each direction
+
+      for (let i = -range; i <= range; i++) {
+        for (let j = -range; j <= range; j++) {
+          for (let k = -range; k <= range; k++) {
+            let h1 = h1Base + i * step;
+            let h2 = h2Base + j * step;
+            let h3 = h3Base + k * step;
+            if (h1 > 0 && h2 > 0 && h3 > 0) {
+              let { expected, minVal, maxVal } = computeExpectedValue(h1, h2, h3);
+              results.push({ h1, h2, h3, ev: expected, min: minVal, max: maxVal });
+            }
+          }
+        }
+      }
+
+      results.sort((a, b) => b.ev - a.ev);
+
+      let html = '<table><tr><th>Hedge 1</th><th>Hedge 2</th><th>Hedge 3</th><th>Expected Value</th><th>Min</th><th>Max</th></tr>';
+      for (let row of results) {
+        html += `<tr><td>${row.h1}</td><td>${row.h2}</td><td>${row.h3}</td><td>$${row.ev.toFixed(2)}</td><td>$${row.min.toFixed(2)}</td><td>$${row.max.toFixed(2)}</td></tr>`;
+      }
+      html += '</table>';
+      document.getElementById('results').innerHTML = html;
+    }
+  </script>
+</body>
+</html>
