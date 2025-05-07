@@ -24,4 +24,4 @@ Features
 - Custom hedge amounts via HTML inputs  
 - Outputs:  
   - Expected value, min, max  
-  - Outcome breakdown for all 8 paths
+  - Outcome breakdown for all 4 paths
