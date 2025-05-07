@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Baccarat 3-Round Hedge Simulation</title>
+</head>
+<body>
+  <h2>Baccarat Hedge Simulation (Stops on Banker Win)</h2>
+  <p>Simulates unique outcomes over 3 rounds. Betting stops once Banker wins (promo converted to cash).</p>
+
+  <label>Hedge 1: <input type="number" id="hedge1" value="1300"></label><br>
+  <label>Hedge 2: <input type="number" id="hedge2" value="2650"></label><br>
+  <label>Hedge 3: <input type="number" id="hedge3" value="5250"></label><br><br>
+
+  <button onclick="simulate()">Run Simulation</button>
+  <pre id="output"></pre>
+
+  <script>
+    const rounds = [
+      { promoBet: 1500 },
+      { promoBet: 3000 },
+      { promoBet: 6000 },
+    ];
+    const rtp = 0.95;
+    const playthroughRequired = 45000;
+    const initialPromo = 1500;
+
+    function simulate() {
+      // Get hedge inputs
+      rounds[0].hedge = parseFloat(document.getElementById("hedge1").value);
+      rounds[1].hedge = parseFloat(document.getElementById("hedge2").value);
+      rounds[2].hedge = parseFloat(document.getElementById("hedge3").value);
+
+      let outcomeMap = new Map();
+
+      for (let i = 0; i < 8; i++) {
+        let binary = i.toString(2).padStart(3, '0');
+        let result = binary.split('').map(x => x === '0' ? 'player' : 'banker');
+
+        let key = [];
+        for (let j = 0; j < 3; j++) {
+          key.push(result[j]);
+          if (result[j] === 'banker') break;
+        }
+        let keyStr = key.join(',');
+        outcomeMap.set(keyStr, (outcomeMap.get(keyStr) || 0) + 1);
+      }
+
+      let output = "";
+      let outcomeCount = 1;
+      let expectedFinalValue = 0;
+      let minFinalValue = Infinity;
+      let maxFinalValue = -Infinity;
+
+      for (let [keyStr, freq] of outcomeMap.entries()) {
+        let probability = freq / 8;
+        let result = keyStr.split(',');
+        let promoBalance = 0;
+        let totalHedge = 0;
+        let hedgeWinnings = 0;
+        let promoWagered = 0;
+        let bankerHit = false;
+        let currentHedge = 0;
+        let roundsPlayed = result.length;
+        let netProfit = 0;
+        let finalValue = 0;
+
+        for (let j = 0; j < result.length; j++) {
+          const r = result[j];
+          const { promoBet, hedge } = rounds[j];
+          currentHedge = hedge;
+          promoWagered += promoBet;
+          totalHedge += hedge;
+
+          if (r === 'player') {
+            promoBalance += promoBet;
+          } else {
+            hedgeWinnings = hedge * 0.95;
+            bankerHit = true;
+            break;
+          }
+        }
+
+        let outcomeStr = result.map(r => r.toUpperCase()).join(', ');
+        output += `Outcome ${outcomeCount++}: ${outcomeStr} (${freq}/8)\n`;
+
+        if (bankerHit) {
+          let netCashProfit = hedgeWinnings - (totalHedge - currentHedge);
+          finalValue = netCashProfit;
+
+          output += `- Banker won in round ${roundsPlayed}, stopped betting\n`;
+          output += `- Hedge Winnings (0.95 × last hedge): $${hedgeWinnings.toFixed(2)}\n`;
+          output += `- Hedge Cost Before Banker Win: $${(totalHedge - currentHedge).toFixed(2)}\n`;
+          output += `- Net Cash Profit: $${netCashProfit.toFixed(2)}\n\n`;
+        } else {
+          let remainingPlaythrough = playthroughRequired - promoWagered;
+          let expectedValue = remainingPlaythrough * rtp;
+          netProfit = promoBalance - totalHedge - (remainingPlaythrough - expectedValue);
+          finalValue = initialPromo + netProfit;
+
+          output += `- Final Promo Balance: $${promoBalance.toFixed(2)}\n`;
+          output += `- Total Hedge Cost: $${totalHedge.toFixed(2)}\n`;
+          output += `- Remaining Playthrough: $${remainingPlaythrough.toFixed(2)}\n`;
+          output += `- Expected Value of Playthrough: $${expectedValue.toFixed(2)}\n`;
+          output += `- Net Profit: $${netProfit.toFixed(2)}\n`;
+          output += `- Final Profit vs. Initial $1500: $${finalValue.toFixed(2)}\n\n`;
+        }
+
+        expectedFinalValue += finalValue * probability;
+        minFinalValue = Math.min(minFinalValue, finalValue);
+        maxFinalValue = Math.max(maxFinalValue, finalValue);
+      }
+
+      output += `===========================\n`;
+      output += `Expected Final Value (weighted by probability): $${expectedFinalValue.toFixed(2)}\n`;
+      output += `Minimum Final Value: $${minFinalValue.toFixed(2)}\n`;
+      output += `Maximum Final Value: $${maxFinalValue.toFixed(2)}\n`;
+
+      document.getElementById("output").textContent = output;
+    }
+  </script>
+</body>
+</html>
