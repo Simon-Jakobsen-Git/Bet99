@@ -21,7 +21,7 @@ Features
 
 - Models 3-round baccarat playthroughs  
 - Stops once Banker wins (real cash captured)  
-- Custom hedge amounts via HTML inputs  
+- Custom hedge amounts  
 - Outputs:  
   - Expected value, min, max  
   - Outcome breakdown for all 4 paths
