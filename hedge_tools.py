@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from itertools import product
 from math import inf
 
-# Constants (match your HTML)
+# Constants 
 ROUNDS = [1500, 3000, 6000]
 RTP = 0.95
 PLAYTHROUGH_REQUIRED = 45000
